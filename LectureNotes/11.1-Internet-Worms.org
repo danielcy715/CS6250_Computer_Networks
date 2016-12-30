@@ -1,0 +1,100 @@
+* Types of Viruses and Worms Overview
+- virus:
+  - infection of existing program that results in modification of original program behavior
+  - requires user action to spread (opening an attachment, opening an exe)
+- worm:
+  - replicates and propogates across internet
+  - usually spread by exploiting flaws in existing programs
+  - replicate automatically
+
+Types of viruses:
+- parasitic virus: infects executables
+- memory-resident virus: infects running programs
+- boot-sector virus: spreads when system is booted
+- polymorphic virus: encrypts part of the virus program with a randomly generated key
+
+Differences between viruses and worms: viruses spread manually, worms spread automatically, so a worm can use any one of the above techniques to spread
+* Internet Worm Lifecycle
+1. infected machine scans for other vulnerable hosts
+2. infect vulnerable host via remote exploit
+3. remain undiscovered so that it can spread before being removed
+* First Worm: "Morris Worm"
+- designed by Rober Morris in 1988
+- no malicious payload, but bogged down infected machines by spawning new processes and exhausting resources
+- affected 10% of all internet hosts
+- spread through three propogation vectors
+  - cracked passwords using a small dictionary and a publicly readable password file, targeted hosts listed in trusted host file
+  - buffer overflow vulnerability in finger daemon
+  - debug command in sendmail
+    - in sendmail, it was possible to execute code using an SMTP message
+- worms typically have multiple vectors in order to facilitate spreading and increase speed
+* Worm Outbreaks in Detail
+- Summer 2001: new era in security with 3 major worm outbreaks
+- code red 1
+  - Jul 13, 2001
+  - first modern worm
+  - exploited buffer overflow in Microsoft's IIS
+  - spread on the 1st and 20th of each month by finding new targets using a random IP scan
+    - spawn 99 new threads, which generated IP addresses at random, and look for vulnerable IIS
+  - Version 2:
+    - released six days later
+    - fixed random scanning bug
+    - so that each instance of the worm scans a different IP space
+    - compromised 350,000 hosts in 14 hrs
+      - complete set of vulnerable IIS hosts on the entire internet
+    - payload: mount DOS attack on whitehouse.gov
+      - bug caused worm to die on 20th of each month, but it would resurrect itself on the first if the clock was wrong
+      - the attack on whitehouse.gov targeted a particular IP address and not the domain name, so the operator just had to move the website to a different IP address
+- code red 2
+  - exploited same vulnerability but with different payload
+  - released August 4, 2001
+  - spread on Windows 2000, crashed on NT
+  - scan preferred nearby addresses from same /8 with probability of 1/2, same /16 with probably of 3/8, and randomly from the internet with the remaining 1/8
+    - reason for this preference: if there was one vulnerable host, then there's likely to be more, since the same admin might configure the other hosts the same way
+      - speeds up infection since the probability of finding another vulnerable host increases
+  - payload: IIS backdoor
+  - dead by design by Oct 1, 2001
+- Nimda
+  - release Sep 18, 2001
+  - spread using multiple vectors
+    - IIS vulnerability
+    - email attachment
+    - installed in exploit code in malicious webpages
+    - spread over local network
+    - file infection
+  - signature based protection didn't help because of its many ways of spreading
+  - first worm to exploit a 0-day attack
+* Modeling Fast-Spreading Worms
+- dormant phase: slow spread
+- inflection point at which infection rate becomes exponential
+- infection plateaus once most of the vulnerables hosts have been found
+
+- k: initial compromise rate
+- N: # vulnerable hosts
+- a: fraction of hosts already compromised
+
+- Nda = Na * k(1-a) dt
+- Nda = new infections in time interval dt
+- k(1-a) = rate at which uninfected hosts become infected
+
+\begin{equation}
+\frac{e^{k*(t-T)}}{1te^{k(t-T)}}
+\end{equation}
+
+The main takeaway of this equation is that to maximize the number of infected hosts, we need to make k, the initial compromise rate,  as large as possible
+* Increasing Compromise Rate
+1. create a hit list, or a list of vulnerable hosts ahead of time
+   - remember that the time it takes to infect the first 10,000 hosts dominates the infection time
+   - scan or do recon before infection
+2. permutation scan: every compromised host has a shared permutation of IP address lists.
+   - starting from own IP and work down ensures that the compromised hosts don't duplicate work
+
+Slammer Worm: Jan 2003
+- exploited buffer overflow in Microsoft SQL server
+- entire code fit in one UDP packet
+  - connectionless: not limited by latency, only by bandwidth
+- caused $1.2 billion in damages
+- knocked out ATM, cell phones, five root DNS, airline processing
+- no malicious payload, but caused resource exhaustion 
+
+

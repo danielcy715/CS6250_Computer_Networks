@@ -1,0 +1,47 @@
+* Router Design
+The ports in border routers terminate into fiber instead of ethernet. The line cards are also biggerthan a typical NIC. There is a need for big powerful routers because:
+- links are getting faster
+- demands are increasing (e.g. streaming video)
+- networks are getting bigger
+* Basic Router Architecture
+Basic router functions:
+1. Receive packet
+2. Look at header to determine destination
+3. Look in forwarding table to determine output interface
+4. Modifies header
+5. Send packet to output interface. 
+
+The basic I/O component of a router is the *line card*. A line card contains the capability to lookup the IP address in the forwarding table, modify headers, and a queue where it can send the packet to the appropriate output. A router has multiple line cards connected by an *interconnection fabric*.
+* Decision: Each Line Card Has Its Own Forwarding Table Copy
+The decision to have each line card have its own forwarding table copy prevents a central table from becoming a bottleneck at high speeds. Otherwise, all line cards would have to do lookups at a central table in a shared buffer memory. 
+* Decision: Crossbar Switching
+One possibility is a shared bus, but one problem is that it can only be used by one I/O pair at a time. Solution to the problem is a *crossbar switch*, or a switched backplane. 
+* Crossbar Switching
+Every input port has a connection to every output port. During each timeslot, each input is connected to zero or one outputs. The advantage is parallelism, but we need proper scheduling algorithms. 
+* Switching Algorithm: Maximal Matching
+Conceptually, we have a router with N inputs and N outputs. In each timeslot, we want a one to one mapping between inputs and ouputs. The goal is maximal matching. However, sometimes demands are not always met, and some packets have to wait until the output port is free. One solution is speeding up the interconnect, but if there are multiple packets in the queue, the packet must wait until all of the packets ahead of it have been sent out. 
+* Head of Line Blocking
+One solution of the previously mentioned blocking behavior is to have multiple virtual queues equal to the number of output ports. That way, packets destined for one output aren't blocked by packets destined for another output. 
+* Scheduling and Fairness
+Scheduling is determining during which timeslots should input and output ports be matched. There are two important goals in scheduling:
+1. efficiency: minimize the number of packets sitting idle at input ports when their destined output ports are free
+2. fairness
+* Max-Min Fairness
+Definition of max-min fairness, first assume we have an allocation of rates of flows. Let's say we have a flow allocation of {x_1, x_2, ... , x_n}. This allocation is fair if increasing any x_i implies that some other x_j that is smaller than x_i is decreased to accomodate the increase for x_i. 
+Resources are allocated to users in order of increasing demand. Small users get what they ask for. No user gets more than what they ask for, and large users with unsatisfied demands split the rest of the capacity. 
+* Example: Max-Min Fairness
+Say we have the following demands: {2, 2.6, 4, 5}, capacity = 10. 
+
+1. We start off with 10 / 4 (capacity / users) = 2.5. This is above the first users' requirement of 2. 
+2. (2.5 - 2) / 3 ((allocation - first user's requirement)/number of remaining users) = 0.167
+3. The second user requires 2.6, but has been allocated 2.67 (2.5 from the first allocation, 0.167 from the second), which is .07 too many, so we'll do .07 / 2 ((total allocation - second user's requirement) / number of remaining users) = 0.03
+4. Users 3 and 4 each have a total allocation of 2.7, so the final allocation is {2, 2.6, 2.7, 2.7}
+
+The reason this is called max-min fairness is we are maximizing the minimum share for users whose requirements were not fully serviced. 
+
+20 / 4 = 5
+5 - 1 = 4, 4 / 3 
+* How to Achieve Max-min Fairness
+1. Round-robin scheduling: given a set of queues, the router will service them in order. The problem is packets may be different. If the first packet is bigger, it's not fair; it's getting a larger share just because it's bigger. 
+2. Bit-by-bit scheduling: during each timeslot, only one bit per queue is serviced. This is perfectly fair, but not feasible. 
+3. Fair queueing: service packets according to their soonest finishing time

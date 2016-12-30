@@ -1,0 +1,44 @@
+* Denial of Service Attacks Overview
+- What is it
+  - an attack that attempts to exhaust resources
+    - network bandwidth
+    - TCP connects (a host has a limited number)
+    - server resources
+  - Pre-2000, DoS attacks were single-source, but after 2000, they became distributed after the advent of internet worms
+- Defenses
+  - ingress filtering
+    - we have a stub AS with prefix 204.69.207.0/24 with no other connected networks and owns only that prefix
+      - the router upstream of the ISP can just drop all traffic where the src IP address is not in the prefix
+	- this is fool proof and works at the edges of an AS
+	- doesn't work in the core (solution is uRPF checks)
+  - uRPF checks (unicast reverse path forwarding)
+    - use routing tables to determine whether a packet could feasibly arrive on a particular interface
+    - a routing table maps IP addresses to interfaces. If traffic is received for a certain IP address destined for the wrong interface, then the packet is dropped
+    - benefit: automatic
+    - downside: requires symmetric routing, but routing in the internet is often asymmetric
+  - SYN cookies (TCP)
+    - TCP 3-way handshake review:
+      1. client sends SYN packet to server
+      2. server sends SYN-ACK
+      3. client sends ACK
+    - problem: the client can send a syn, causing the server to allocate memory for the socket connection, but if the client never returns, the client can force the server to allocate many socket buffers by sending many SYNs and never returning
+      - this can be done with spoofed IP addresses
+    - solution: syn cookies
+      - upon receiving a syn from the client, the server, instead of allocating a socket buffer for the tuple associated with the connection, keeps no state, and picks an initial sequence number for the connection that depends on IP address and port of client and server and random nonce
+      - client replies with acknowledgement with the sequence number
+      - server checks the sequence number by rehashing the info it already has
+* Inferring DoS Activity Using Backscatter
+- when an attacker spoofs an IP address, replies will go to the spoofed IP address. These replies are called "backscatter"
+- we can monitor for this backscatter
+- assuming that the spoofed src IPs are selected at random, the amount of backscatter represents a fraction of the size of the overall attack rate
+- for example, if we monitor N IP addresses in our "telescope" and see a total attack rate of m packets per second, then we expect to see x response (backscatter) packets =  N/2^32 * M 
+- to get the total attack rate, solve for m
+- /8, or 2^24 IP addresses, multiply observed backscatter rate x by 2^32 / 2^24 to get total attack rate m
+* Automated Denial of Service Mitigation
+- SDN can be used to mitigate DoS attacks
+- a network will start off in the normal state, and a DoS detection event will cause the network to change to an 'under attack' state
+- in response, the network will install specific flow-table entries that will mitigate the effects of a DoS attack
+
+
+
+

@@ -1,0 +1,94 @@
+* IP Addressing
+IP: "Internet Protocol". An IP address is a 32-bit number arranged in a "dotted quad" formation. For example, 130.208.7.36. Each number is an 8 bit number. This allows for 2^32 addresses, which may seem a lot but we are actually running out of addresses. Even so, storing 2^32 addresses in a table would require a lot of space and memory. We need a way to group IP addresses. 
+* Pre-1994: "Classful" Addressing
+IP addresses were divided into a network IP portion and a host IP portion. Anything that starts with a 0 is a class A address, and the next 7 bits are the net ID. The next 24 bits comprise the host ID, meaning there are 2^24 possible hosts. Anything starting with 10 is a class B address. The next 14 bits signified the net ID, and the last 16 bits signified the host ID, meaning there are 2^16 hosts. Class C addresses started with 110, the next 21 bits were for the net ID, and the last 8 bits signify the host ID. 
+
+After 1994, it was noted that rates were exceeding HW/SW capabilities, and we were running out of class C addresses. The solution is CIDR (classless interdomain routing).
+* IP Address Allocation
+IANA (internet assigned numbers authority) allocates addresses to regional routing registries. Each continent has its own RRR, which in turn, allocates addresses to networks. 
+
+Recently IANA allocated all /8 blocks, so we're out of IPv4 addresses, but this doesn't mean that your new device won't work when you plug it into a network; there are ways of coping with this. 
+
+The command ~whois~ gives info on who owns an IP address, who to contact, etc. 
+* Classless Interdomain Routing (CIDR)
+Adopted in 1994. Instead of having a fixed number of host/network id bits, we would have a 32-bit IP address and a *mask*. A mask is of variable length and indicates which bits of an IP address are the host and network id bits. For example, 65.14.248.0/22. /22 indicates the mask length; it indicates that the first 22 bits are the network bits. 
+
+The upsides are that the number of network bits used can be of variable length, and independent of range. The complication is that there are overlapping address prefixes. For example, 65.14.248.0/24 overlaps with /22. /24 is a subset of /22. If they both show up in a routing table, a router should forward to the address with the longer mask length because it's more specific.
+* Longest Prefix Match
+To review, each packet has a destination IP address, the router looks up table entry that matches that address. When we see an IP address that matches multiple prefixes, we match the IP address with the longest matching prefix. This increases efficiency, since addresses can be allocated with much finer granularity. This also increases hiearchy/aggregation. For example, if two downstream networks, A (12.20.0.0/16) and B (12.21.0.0/16) each had /16 address, other networks want to communicate to A and B would only have to know about upstream network C (12.0.0.0/8) since C covers both A and B. 
+
+CIDR has slowed the growth of routing tables (linear growth vs. exponential growth). However, around 2000, the rate of growth continued to increase. One of the reasons is *multihoming*. Multihoming makes it difficult for upstream providers to aggregate prefixes. It requires a provider to store multiple prefixes for a single AS. 
+* Multihomiong Frustrates Aggregation
+Let's say stub AS 30308 is connected to upstream providers AT&T and Verison. AS 30308 wants to be multihomed, or reachable by two upstream providers. AS 30308 has an address prefix 12.20.249.0/24. AT&T has a prefix of 12.0.0.0/8. AT&T would like to aggregate these addresses, but it can't. If it did, suppose AT&T and Verison wish to advertise the stub AS' address to the internet. As a result AT&T would advertise a /8 prefix, while Verison would advertise a /24 prefix (AT&T aggregated but Verison didn't), and by longest prefix match, all the traffic would go through Verison.
+* Longest Prefix Match to Control Inbound
+Suppose we have the following topology of ASes:
+
+A -> B,C
+B -> D
+C -> D
+
+Suppose A has a prefix of 10.1.0.0/16 and advertises this upstream. D would normally choose just one route to A, but suppose A wants to balance the load across multiple routes? AS A could advertise routes for two more specific prefixes, splitting the /16 in half. A would advertise 10.1.0.0/17 to B, and 10.1.128.0/17 to C. 
+
+A CIDR report shows AS' IP prefixes, and how many of them they could aggregate. 
+* Lookup Tables and How LPM Works
+- Exact match vs. LPM
+- IP Address lookup
+- Implementation of LPM in the form of tries
+* Lookup Algorithm Depends on Protocol
+| Protocol            | Mechanism            | Technique                                       |
+|---------------------+----------------------+-------------------------------------------------|
+| MPLS, Ethernet, ATM | Exact Match          | Direct lookup, associated, hashing, binary tree |
+| IP4, IP6            | longest prefix match | Radix trie, compressed trie, binary search      |
+
+
+Exact match is simple and has a complexity of O(1), but it's inefficient in its use of memory
+* IP Lookups Find Long Prefixes
+LPM is harder to implement than exact match because the destination IP address does not indicate the length, but we want to match the IP prefix with the longest length. We need some algorithm to search all prefix lengths and prefixes of given lengths.
+* LPM in IPv4 Exact Match
+What if we implement LPM in IPv4 using exact match?
+
+We take our IP address and send to a bunch of exact match tables, select the longest match, and forward the packet out the appropriate port. This is inefficient since we would need 32 tables (for 32 possible lengths). 
+* Address Lookup Using Tries
+A trie is a data structure. Prefixes are spelled out by following path from root. To find the best prefix, spell out address in trie. When looking up a prefix with a given address, we traverse the trie, and we select the last prefix we have an entry for (see the [[https://www.udacity.com/course/viewer#!/c-ud819/l-657518872/m-636779706][video]]). This specific structure is called a *single-bit trie*. It uses memory efficiently, and insertion is simple. The number of memory accesses required to look up an address is high, though (worst case is 32 lookups, one lookup for each bit)
+* Direct Trie
+Instead of one bit per lookup, we could have a two level trie. The first memory lookup is dictated by the first 24 bits of an address, and the second memory lookup is dictated by the last 8 bits. Problem is that this structure results in an inefficient use of memory. Suppose we want to represent a /16 prefix. If we're encoding 24 bits in a trie but we want to represent a /16 prefix, we end up having a lot of duplicate entries. 
+* Memory Efficiency and Fast Lookup
+To achieve mem eff of single bit trie with fast lookup of direct trie, we could have a multi-bit trie, or a "multi-ary" trie. A binary trie has a k = 1, depth = W, degree = 2, stride = 2 bit. A multi-bit trie has a depth of W/K, degree = 2^k, stride of k bits. 
+* 4-ary Trie
+k = 2, meaning each node in the trie is responsible for resolving 2 bits instead of 1. "Leaf-pushed" trie is an optimization that pushes the leaf into the node that contains pointers to the leaves.
+* Alternatives to LPM w/ Tries
+Content-Addressable Memory (CAM): a hardware bsaed route lookup, with an address as an input tag, and the output value is a port. This has O(1) lookup and exact matching
+
+Ternary CAM (0, 1, *) -> permits implementation of LPM. You can have multiple matches, but prioritize a match based on LPM
+* NAT and IPv6
+Problem is that IPv4 only has 2^32 unique addresses and IP addresses are allocated in blocks. We've already run out.
+
+NAT and IPv6 are two solutions to the growth of the internet
+* Network Address Translation
+Allows multiple networks to reuse the same private IP address space. Say we have two networks. NAT allows the reuse of the same portion of an internet space, and they both have a private IP space of 192.168.0.0/16. These two networks couldn't coexist in the public internet. NAT translates this private IP space to public IP addresses taht are visible to the internet. So these networks have different public IP addresses though they have the same private IP address space. 
+
+So how does NAT differentiate between hosts within a network if they all have the same public IP? Well, an incoming packet comes in through a certain port with a certain private IP address. NAT translates this private IP into a public IP and port (not necessarily the same port. The NAT keeps a table with a mapping between the privateIP + port and publicIP + port. 
+
+This is often used in Broadband, SOHO, and VPNs. This saves IPv4 addresses, but the drawback is that the e2e model is broken. If the NAT device failed, the mapping is lost, thereby breaking all active conncetion on this path. It is also asymmetric. It's hard for a host in the internet to communicate with a host in a private network. 
+* IPv4 to IPv6
+Another solution is to simply add more bits to an address. IPv6 has fewer headers, and has 128 bits for both src and dest addresses that are allocated as such: 
+- Top 48 bits: public routing topology
+  - 3 bit aggregation
+  - 13 top level provider
+  - 8 reserved
+  - 24 other
+- 16-bit site identifier
+- 64-bit interface ID
+  - 48-bit ethernet + 16 more bits
+
+Benefits:
+- more addresses
+- simpler header
+- multihoming is easier
+- security is built in (crypto extension)
+* IPv6 Routing Table Entries
+We have yet to see mass deployment of IPv6 despite its benefits. There are 16,000 Ipv6 routes in the global routing table (not that much). It's hard to deploy incrementally. Remember the narrow waist. Everything depends on IPv4 and IPv4 is built on so many physical infrastructures, changing IPv4 to IPv6 is tricky. There are some incremental deployment options.
+* IPv6 Incremnetal Deployment
+In *dual stack deployment*, a host can speak both IPv4 and IPv6. This means the host must either have both addresses, or a translater that knows how to translate IPv6 to IPv4. The way translation could work is embedding the IPv4 address in the IPv6 address. Dual stack host config solves the problem of host IP address assignment, but doesn't solve the problem of IPv6 islands.
+
+For example, some portions might deploy IPv6, but suppose some portions use IPv4. We cuold use 6 to 4 tunneling. A v6 packet is encapsulated in a v4 packet. That v4 packet is routed to a v4 to v6 gateway. 

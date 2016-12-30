@@ -1,0 +1,50 @@
+* Spam
+- Unwanted commercial email
+- most spam goes to spam folder
+- problem for network operators
+  - need to design filters
+  - mail servers still have to store the mail
+  - security risk if the message contains a malicious payload (malware, phishing attack)
+- 95% of all email is spam
+- 1 in every 87 emails is a phishing attack
+- 50,000 unique phishing attacks in a month
+
+Filters
+- how to differentiate bad messages (spam) from good messages (ham)
+  - content-based: Viagara, rolex -> spam
+    - easy to evade
+      - different spellings
+      - send content via photo or links instead of text
+  - IP address of sender (blacklisting)
+  - behavior (how the mail is sent - time of day, sent as a batch of emails of similar sizes)
+* IP Blacklisting
+- When a sender sends email, receiver sends query of IP to a blacklist
+- receiver can decide to accept the message based on the results, terminate the connection, or reject the message
+* Behavior
+- geographic location of the sender and receiver
+- set of target recipients
+- sender's upstream ISP
+- whether the sender is potentially a member of a botnet or is compromised
+* Spam Blacklisting Cont'd
+- evading a blacklist
+  1. hijack IP prefix for a short period of time
+  2. send spam within the prefix
+  3. withdraw the prefix
+- This ephemeral-ness of IP addresses renders blacklisting useless
+
+There are many single-packet features that work well for filtering spam:
+- distance b/w sender and receiver
+- density of IP space in terms of how many other mail senders are nearby
+- local time of day of sender
+- AS of sender IP
+
+Single message features: 
+- number of recipients
+- length of message
+
+Aggregates (group of email messages):
+- variation in length of messages
+
+These features are put together in a system called SNARE (Spatio-Temporal Network-Level Automated Reputation Engine)
+- 70% detection rate
+- FP rate of 1/10 of 1%

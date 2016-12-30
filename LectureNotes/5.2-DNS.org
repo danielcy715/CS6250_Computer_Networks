@@ -1,0 +1,22 @@
+* Domain Name System Part 1
+The purpose of DNS to map human readable names to IP addresses. A client might want to look up a domain name by invoking a function such as "gethostbyname()" that typically takes a domain name as an argument and returns the IP address. The client has a *stub resolver* takes that name and issues the query. The stub resolver might have cached the answer, but if not, it sends a request to the local DNS resolver, usually configured automatically. The client issues a *recursive* query, meaning doesn't want to hear intermediate referrals; it wants to hear the final answer. The local resolver might perform *iterative* queries, where it might have the answer to the client's query in the cache, but suppose nothing is cached. 
+
+Each fully qualified domain name is presumed to end with a dot. (e.g. www.gatech.edu.) indicating the root of the DNS hierarchy. The authoritative server IP for the root domain might already be configured in the local DNS resolver, so the resolver can send a query (A record), and receive an NS record (a referral) to an edu service. The resolver can send the same A record to the edu servers, and receive an NS record to the dns servers for gatech and receive an A record with the IP address. 
+* Domain Name System Part 2
+The process of resolving domain names is quite slow, since there are multiple round trips to query different authoritative servers. This is why the local DNS resolver keeps a cache of queries and records. Each record has a "time to live", or an expiration date for how long the answer is good for. 
+* Record Types
+A: Name -> IP address
+NS: Name -> authoritative nameserver ("referrals"). This type of record allows DNS to be hierarchical
+MX: Name -> mail server
+CNAME: Canonical name (a pointer to another domain name, an alias)
+PTR: IP -> name ("reverse lookup")
+AAAA: Name -> IPv6 address
+* Examples (using dig) Part 1
+- Numbers indicate TTL in seconds
+- If you see two IP addresses, it means the service uses load balancing
+- You can specify a NS query (e.g. dig ns www.gatech.edu) and it will return the nameservers and their ip addresses
+* Examples (using dig) Part 2
+- If you want to see every step of the DNS lookup process, you could do a dig trace with ~dig +trace gatech.edu~
+- When doing a reverse lookup, special nameservers in-addr.arpa are used. They give referrals for nameservers for each quad in an IP address. 
+
+For example, if we lookup IP address 130.207.97.11, the corresponding in-addr.arpa domain name would be 11.97.207.130.in-addr.arpa
