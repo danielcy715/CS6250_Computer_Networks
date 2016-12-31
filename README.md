@@ -2,4 +2,4 @@
 
 This is the repository for Georgia Tech OMSCS CS6250 Computer Networks.
 
-The lecture notes are from the Internet.
+The lecture notes are from one fellow student.
